@@ -1,0 +1,141 @@
+﻿@model CampusJobs.Models.RecruiterViewModel
+
+@{
+    ViewData["Title"] = "Recruiter Dashboard";
+    ViewData["HeaderType"] = "Recruiter";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="~/css/style.css" />
+    <script src="~/js/script.js"></script>
+</head>
+<body>
+    <text class="subheader">
+        Recruiter Dashboard
+        <br><br>
+        <input type="text" class="filterbar" id="filterInput" onkeyup="filterTable()" placeholder="Search">
+    </text>
+
+    <div class="container">
+        <div class="box">
+            <input type="radio" class="tab-toggle" name="tab-toggle" id="tab1" checked>
+            <input type="radio" class="tab-toggle" name="tab-toggle" id="tab2">
+            <input type="radio" class="tab-toggle" name="tab-toggle" id="tab3">
+
+            <ul class="tab-list1">
+                <li class="tab-item">
+                    <label class="tab-trigger" for="tab1">Pending Shifts</label>
+                </li>
+                <li class="tab-item">
+                    <label class="tab-trigger" for="tab2">Shift Management</label>
+                </li>
+                <li class="tab-item">
+                    <label class="tab-trigger" for="tab3">Shift Creation</label>
+                </li>
+            </ul>
+
+            <div class="tab-container">
+
+                <!-- Pending Shifts Tab -->
+
+                <div class="tab-content">
+                    <table id="Pending-Shifts" class="table-container">
+                        <tr>
+                            <th class="thhead">Shift ID</th>
+                            <th class="thhead">Date</th>
+                            <th class="thhead">Student ID</th>
+                            <th class="thhead">Student Name</th>
+                            <th class="thhead">Visa Restriction</th>
+                            <th class="thhead">Start</th>
+                            <th class="thhead">End</th>
+                            <th class="thhead">Approved Hours</th>
+                            <th class="thhead">Duration</th>
+                            <th class="thhead">Accept/Decline shift</th>
+                        </tr>
+
+                        @foreach (var shift in Model.PendingShifts)
+                        {
+                            <tr>
+                                <td>@shift.ShiftId</td>
+                                <td>@shift.Date.ToShortDateString()</td>
+                                <td>@shift.StudentId</td>
+                                <td>@shift.StudentName</td>
+                                <td>@(shift.IsVisaRestricted ? "Yes" : "No")</td>
+                                <td>@shift.StartTime.ToShortTimeString()</td>
+                                <td>@shift.EndTime.ToShortTimeString()</td>
+                                <td>@shift.ApprovedHours</td>
+                                <td>@shift.Duration</td>
+                                <td class="blankcell-acceptdecline">
+                                    <button class="accept-button" onclick="handleAccept(this)">Accept</button>
+                                    <button class="decline-button" onclick="handleDecline(this)">Decline</button>
+                                </td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+
+                <!-- Shift Management Tab -->
+
+                <div class="tab-content">
+                    <table id="Shift-Management" class="table-container">
+                        <tr>
+                            <th class="thhead">Shift ID</th>
+                            <th class="thhead">Date</th>
+                            <th class="thhead">Start</th>
+                            <th class="thhead">End</th>
+                            <th class="thhead">End shift</th>
+                        </tr>
+
+                        @foreach (var shift in Model.ActiveShifts)
+                        {
+                            <tr>
+                                <td>@shift.ShiftId</td>
+                                <td>@shift.Date.ToShortDateString()</td>
+                                <td>@shift.StartTime.ToShortTimeString()</td>
+                                <td>@shift.EndTime.ToShortTimeString()</td>
+                                <td class="blankcell-acceptdecline">
+                                    <button class="decline-button" onclick="handleDecline(this)">End</button>
+                                </td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+
+                <!-- Shift Creation Tab -->
+
+                <div class="tab-content">
+
+                    <div class="form-container">
+                        <h3>Create Shift</h3>
+                        <form method="post" asp-page-handler="CreateShift">
+                            <div class="form-group">
+                                <label for="ShiftDate">Date</label>
+                                <input type="date" class="form-control" id="ShiftDate" name="ShiftDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="StartTime">Start Time</label>
+                                <input type="time" class="form-control" id="StartTime" name="StartTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="EndTime">End Time</label>
+                                <input type="time" class="form-control" id="EndTime" name="EndTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="Duration">Duration (hours)</label>
+                                <input type="number" class="form-control" id="Duration" name="Duration" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Publish Shift</button>
+                        </form>
+
+                    </div>
+
+                    <br>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

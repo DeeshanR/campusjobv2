@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<link rel="stylesheet" href="~/css/style.css" />
+<script src="~/js/script.js"></script>
+
+<body>
+
+    @switch (ViewData["HeaderType"] as string)
+    {
+        case "Student":
+            <div class="headerStudentBoard" style="color: rgba(131,2,2,255);">Student <text style="color: rgba(0,0,0,255);"> Board </text></div>
+            break;
+        case "Recruiter":
+            <div class="headerAdminBoard" style="color: white;"> <text style="color:#e69bb4; font-size: 20px;">Management</text> <br> Recruiter Audit Board </div>
+            break;
+        case "Admin":
+            <div class="headerAdminBoard" style="color: white;"> <text style="color:#e69bb4; font-size: 20px;">Management</text> <br> Admin Audit Board </div>
+            break;
+        default:
+            <div class="headerStudentBoard" style="color: rgba(131,2,2,255);">Campus <text style="color: rgba(0,0,0,255);"> Jobs </text></div>
+            break;
+    }
+
+    <nav>
+        <ul>
+            <li>
+                <a href="TimeSheets" class="icon-align">
+                    <img src="Icons\Timesheets.png" alt="Timesheets icon" class="icon">
+                    Timesheets
+                </a>
+            </li>
+        </ul>
+
+        <button class="transparent-button" onclick="window.location.reload();">
+            <img src="Icons\reload.png" alt="Refresh" height="30">
+        </button>
+    </nav>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer>
+        <text style="padding-left: 2%;"> Campus </text> <text style="float: right; padding-right: 2%;"> Copyright 2025 </text>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
