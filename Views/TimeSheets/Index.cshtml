@@ -14,6 +14,7 @@
 <body>
     <text class="subheader">
         Timesheets
+        <input type="text" class="filterbar" id="filterInput" onkeyup="filterTable()" placeholder="Search">
         <br><br>
     </text>
 
@@ -33,7 +34,6 @@
 
             <div class="tab-container">
                 <!-- Confirmed Shifts Tab -->
-                <input type="text" class="filterbar" id="filterInput" onkeyup="filterTable()" placeholder="Search">
                 <div class="tab-content">
                     <table id="Confirmed-Shifts" class="table-container">
                         <tr>
