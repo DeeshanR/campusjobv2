@@ -70,37 +70,102 @@ namespace campusjobv2.Controllers
             return View(model);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateShift(DateTime shiftDate, DateTime startTime, DateTime endTime, decimal duration)
+[HttpPost]
+public async Task<IActionResult> CreateShift(DateTime shiftDate, DateTime startTime, DateTime endTime, decimal duration)
+{
+    // 1. First find or create a default student employee
+    var defaultStudent = await _context.Employees
+        .Include(e => e.Recruiter)
+        .FirstOrDefaultAsync(e => e.Recruiter.User.Email == "default@student.com");
+    
+    if (defaultStudent == null)
+    {
+        // Create default student user first
+        var studentUser = new User
         {
-            var shift = new OfferedShift
-            {
-                Student_ID = 1, // Default student, should be handled differently in production
-                Recruitment_ID = 1, // Current recruiter, should get from session
-                Date_Offered = DateTime.Now,
-                Status = false, // Pending
-                Start_Date = shiftDate.Date.Add(startTime.TimeOfDay),
-                End_Date = shiftDate.Date.Add(endTime.TimeOfDay),
-                Total_Hours = duration
-            };
+            First_Name = "Default",
+            Last_Name = "Student",
+            Email = "default@student.com",
+            Password = "TempPassword123", // Should be hashed in production
+            Role = 3 // Student role
+        };
+        _context.Users.Add(studentUser);
+        await _context.SaveChangesAsync();
 
-            _context.OfferedShifts.Add(shift);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Index");
+        // Get any recruiter (or use the same default recruiter logic from before)
+        var recruiter = await _context.Recruiters.FirstOrDefaultAsync();
+        if (recruiter == null)
+        {
+            ModelState.AddModelError("", "No recruiters available to assign students");
+            return View(); // Return to form with error
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AcceptShift(int shiftId)
+        // Then create employee record
+        defaultStudent = new Employee
         {
-            var shift = await _context.OfferedShifts.FindAsync(shiftId);
-            if (shift != null)
-            {
-                shift.Status = true;
-                await _context.SaveChangesAsync();
-            }
-            return RedirectToAction("Index");
-        }
+            Student_ID = studentUser.User_ID, // Assuming Student_ID matches User_ID
+            Recruitment_ID = recruiter.Recruitment_ID
+        };
+        _context.Employees.Add(defaultStudent);
+        await _context.SaveChangesAsync();
+    }
+
+    // 2. Create the shift with valid student ID
+    var shift = new OfferedShift
+    {
+        Student_ID = defaultStudent.Student_ID, // Use the valid student ID
+        Recruitment_ID = defaultStudent.Recruitment_ID, // Or get from current user if logged in
+        Date_Offered = DateTime.Now,
+        Status = false, // Pending
+        Start_Date = shiftDate.Date.Add(startTime.TimeOfDay),
+        End_Date = shiftDate.Date.Add(endTime.TimeOfDay),
+        Total_Hours = duration
+    };
+
+    _context.OfferedShifts.Add(shift);
+    await _context.SaveChangesAsync();
+
+    return RedirectToAction("Index");
+}
+
+[HttpPost]
+public async Task<IActionResult> AcceptShift(int shiftId)
+{
+    var shift = await _context.OfferedShifts
+        .Include(o => o.ApprovedShifts)
+        .FirstOrDefaultAsync(o => o.Offer_ID == shiftId);
+
+    if (shift == null)
+    {
+        return NotFound();
+    }
+
+    // Mark as approved
+    shift.Status = true;
+
+    // Create an approved shift record
+    var approvedShift = new ApprovedShift
+    {
+        Offer_ID = shift.Offer_ID,
+        Hours_Worked = shift.Total_Hours,
+        Status = true,
+        Date_Uploaded = DateTime.Now
+    };
+
+    _context.ApprovedShifts.Add(approvedShift);
+    
+    try
+    {
+        await _context.SaveChangesAsync();
+        return RedirectToAction("Index");
+    }
+    catch (Exception ex)
+    {
+        // Log the error
+        Console.WriteLine($"Error approving shift: {ex.Message}");
+        return StatusCode(500, "Error approving shift");
+    }
+}
 
         [HttpPost]
         public async Task<IActionResult> DeclineShift(int shiftId)

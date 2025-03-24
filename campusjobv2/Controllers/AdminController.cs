@@ -47,33 +47,58 @@ namespace campusjobv2.Controllers
             return View(model);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateStudentAccount(string studentId, string name, string email, string department, string visaRestricted)
+[HttpPost]
+public async Task<IActionResult> CreateStudentAccount(string studentId, string name, string email, string department, string visaRestricted)
+{
+    // 1. First find or create a default recruiter
+    var defaultRecruiter = await _context.Recruiters
+        .FirstOrDefaultAsync(r => r.User.Email == "default@recruiter.com");
+    
+    if (defaultRecruiter == null)
+    {
+        // Create default recruiter user first
+        var recruiterUser = new User
         {
-        
-            var user = new User
-            {
-                First_Name = name.Split(' ')[0],
-                Last_Name = name.Split(' ').Length > 1 ? name.Split(' ')[1] : "",
-                Email = email,
-                Password = "TempPassword123", 
-                Role = 3 
-            };
+            First_Name = "Default",
+            Last_Name = "Recruiter",
+            Email = "default@recruiter.com",
+            Password = "TempPassword123", // Should be hashed in production
+            Role = 2 // Recruiter role
+        };
+        _context.Users.Add(recruiterUser);
+        await _context.SaveChangesAsync();
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+        // Then create recruiter record
+        defaultRecruiter = new Recruiter
+        {
+            User_ID = recruiterUser.User_ID
+        };
+        _context.Recruiters.Add(defaultRecruiter);
+        await _context.SaveChangesAsync();
+    }
 
-            // Create employee record
-            var employee = new Employee
-            {
-                Student_ID = int.Parse(studentId),
-                Recruitment_ID = 1
-            };
+    // 2. Create student user
+    var user = new User
+    {
+        First_Name = name.Split(' ')[0],
+        Last_Name = name.Split(' ').Length > 1 ? name.Split(' ')[1] : "",
+        Email = email,
+        Password = "TempPassword123", // Should be hashed in production
+        Role = 3 // Student role
+    };
+    _context.Users.Add(user);
+    await _context.SaveChangesAsync();
 
-            _context.Employees.Add(employee);
-            await _context.SaveChangesAsync();
+    // 3. Create employee record with valid recruiter
+    var employee = new Employee
+    {
+        Student_ID = int.Parse(studentId),
+        Recruitment_ID = defaultRecruiter.Recruitment_ID // Use the valid recruiter ID
+    };
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
 
-            return RedirectToAction("Index");
-        }
+    return RedirectToAction("Index");
+}
     }
 }
