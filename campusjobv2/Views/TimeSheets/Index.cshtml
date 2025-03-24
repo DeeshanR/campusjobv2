@@ -1,0 +1,98 @@
+@model CampusJobs.Models.TimeSheetsViewModel
+
+@{
+    ViewData["Title"] = "TimeSheets";
+    ViewData["HeaderType"] = "Student";
+    Layout = "_Layout";
+}
+
+<text class="subheader">
+    Timesheets
+    <input type="text" class="filterbar" id="filterInput" onkeyup="filterTable()" placeholder="Search">
+    <br><br>
+</text>
+
+<div class="container">
+    <div class="box">
+        <input type="radio" class="tab-toggle" name="tab-toggle" id="tab1" checked>
+        <input type="radio" class="tab-toggle" name="tab-toggle" id="tab2">
+
+        <ul class="tab-list">
+            <li class="tab-item">
+                <label class="tab-trigger" for="tab1">Confirmed Shifts</label>
+            </li>
+            <li class="tab-item">
+                <label class="tab-trigger" for="tab2">Available Shifts</label>
+            </li>
+        </ul>
+
+        <div class="tab-container">
+            <!-- Confirmed Shifts Tab -->
+            <div class="tab-content">
+                <table id="Timesheets" class="table-container">
+                    <tr>
+                        <th class="thhead">Date</th>
+                        <th class="thhead">Shift ID</th>
+                        <th class="thhead">Available Shifts</th>
+                        <th class="thhead">Start Time</th>
+                        <th class="thhead">End Time</th>
+                        <th class="thhead">Total Hours</th>
+                        <th class="thhead">Recruiter</th>
+                    </tr>
+
+                    @foreach (var timesheet in Model.ConfirmedShifts)
+                    {
+                        <tr>
+                            <td>@timesheet.Date.ToShortDateString()</td>
+                            <td>@timesheet.ShiftId</td>
+                            <td>@timesheet.AvailableShifts</td>
+                            <td>@timesheet.StartTime.ToShortTimeString()</td>
+                            <td>@timesheet.EndTime.ToShortTimeString()</td>
+                            <td>@timesheet.TotalHours</td>
+                            <td>@timesheet.Recruiter</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+
+            <!-- Available Shifts Tab -->
+            <div class="tab-content">
+                <table id="Available-Shifts" class="table-container">
+                    <tr>
+                        <th class="thhead">Date</th>
+                        <th class="thhead">Shift ID</th>
+                        <th class="thhead">Available Shifts</th>
+                        <th class="thhead">Start Time</th>
+                        <th class="thhead">End Time</th>
+                        <th class="thhead">Total Hours</th>
+                        <th class="thhead">Recruiter</th>
+                        <th class="thhead">Accept/Decline shift</th>
+                    </tr>
+
+                    @foreach (var timesheet in Model.AvailableShifts)
+                    {
+                        <tr>
+                            <td>@timesheet.Date.ToShortDateString()</td>
+                            <td>@timesheet.ShiftId</td>
+                            <td>@timesheet.AvailableShifts</td>
+                            <td>@timesheet.StartTime.ToShortTimeString()</td>
+                            <td>@timesheet.EndTime.ToShortTimeString()</td>
+                            <td>@timesheet.TotalHours</td>
+                            <td>@timesheet.Recruiter</td>
+                            <th class="blankcell-acceptdecline">
+                                <form method="post" asp-action="AcceptShift">
+                                    <input type="hidden" name="shiftId" value="@timesheet.ShiftId" />
+                                    <button type="submit" class="accept-button">Accept</button>
+                                </form>
+                                <form method="post" asp-action="DeclineShift">
+                                    <input type="hidden" name="shiftId" value="@timesheet.ShiftId" />
+                                    <button type="submit" class="decline-button">Decline</button>
+                                </form>
+                            </th>
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
