@@ -1,13 +1,13 @@
-@model CampusJobs.Models.AdminViewModel
+@model CampusJobs.Models.RecruiterViewModel
 
 @{
-    ViewData["Title"] = "Admin Dashboard";
-    ViewData["HeaderType"] = "Admin";
+    ViewData["Title"] = "Recruiter Dashboard";
+    ViewData["HeaderType"] = "Recruiter";
     Layout = "_Layout";
 }
 
 <text class="subheader">
-    Admin Dashboard
+    Recruiter Dashboard
     <br><br>
     <input type="text" class="filterbar" id="filterInput" onkeyup="filterTable()" placeholder="Search">
 </text>
@@ -16,70 +16,115 @@
     <div class="box">
         <input type="radio" class="tab-toggle" name="tab-toggle" id="tab1" checked>
         <input type="radio" class="tab-toggle" name="tab-toggle" id="tab2">
+        <input type="radio" class="tab-toggle" name="tab-toggle" id="tab3">
 
-        <ul class="tab-list">
+        <ul class="tab-list1">
             <li class="tab-item">
-                <label class="tab-trigger" for="tab1">Audit Board</label>
+                <label class="tab-trigger" for="tab1">Pending Shifts</label>
             </li>
             <li class="tab-item">
-                <label class="tab-trigger" for="tab2">Student Account Creation</label>
+                <label class="tab-trigger" for="tab2">Shift Management</label>
+            </li>
+            <li class="tab-item">
+                <label class="tab-trigger" for="tab3">Shift Creation</label>
             </li>
         </ul>
 
         <div class="tab-container">
-            <!-- Audit Board Tab -->
+            <!-- Pending Shifts Tab -->
             <div class="tab-content">
                 <table id="Timesheets" class="table-container">
                     <tr>
                         <th class="thhead">Shift ID</th>
+                        <th class="thhead">Date</th>
                         <th class="thhead">Student ID</th>
                         <th class="thhead">Student Name</th>
-                        <th class="thhead">Recruiter</th>
-                        <th class="thhead">Date</th>
+                        <th class="thhead">Visa Restriction</th>
+                        <th class="thhead">Start</th>
+                        <th class="thhead">End</th>
+                        <th class="thhead">Approved Hours</th>
                         <th class="thhead">Duration</th>
-                        <th class="thhead">Status</th>
+                        <th class="thhead">Accept/Decline shift</th>
                     </tr>
 
-                    @foreach (var audit in Model.AuditBoard)
+                    @foreach (var shift in Model.PendingShifts)
                     {
                         <tr>
-                            <td>@audit.ShiftId</td>
-                            <td>@audit.StudentId</td>
-                            <td>@audit.StudentName</td>
-                            <td>@audit.Recruiter</td>
-                            <td>@audit.Date.ToShortDateString()</td>
-                            <td>@audit.Duration</td>
-                            <td>@audit.Status</td>
+                            <td>@shift.ShiftId</td>
+                            <td>@shift.Date.ToShortDateString()</td>
+                            <td>@shift.StudentId</td>
+                            <td>@shift.StudentName</td>
+                            <td>@(shift.IsVisaRestricted ? "Yes" : "No")</td>
+                            <td>@shift.StartTime.ToShortTimeString()</td>
+                            <td>@shift.EndTime.ToShortTimeString()</td>
+                            <td>@shift.ApprovedHours</td>
+                            <td>@shift.Duration</td>
+                            <td class="blankcell-acceptdecline">
+                                <form method="post" asp-action="AcceptShift">
+                                    <input type="hidden" name="shiftId" value="@shift.ShiftId" />
+                                    <button type="submit" class="accept-button">Accept</button>
+                                </form>
+                                <form method="post" asp-action="DeclineShift">
+                                    <input type="hidden" name="shiftId" value="@shift.ShiftId" />
+                                    <button type="submit" class="decline-button">Decline</button>
+                                </form>
+                            </td>
                         </tr>
                     }
                 </table>
             </div>
 
-            <!-- Student Account Creation Tab -->
+            <!-- Shift Management Tab -->
+            <div class="tab-content">
+                <table id="Timesheets" class="table-container">
+                    <tr>
+                        <th class="thhead">Shift ID</th>
+                        <th class="thhead">Date</th>
+                        <th class="thhead">Start</th>
+                        <th class="thhead">End</th>
+                        <th class="thhead">End shift</th>
+                    </tr>
+
+                    @foreach (var shift in Model.ActiveShifts)
+                    {
+                        <tr>
+                            <td>@shift.ShiftId</td>
+                            <td>@shift.Date.ToShortDateString()</td>
+                            <td>@shift.StartTime.ToShortTimeString()</td>
+                            <td>@shift.EndTime.ToShortTimeString()</td>
+                            <td class="blankcell-acceptdecline">
+                                <form method="post" asp-action="DeclineShift">
+                                    <input type="hidden" name="shiftId" value="@shift.ShiftId" />
+                                    <button type="submit" class="decline-button">End</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </table>
+            </div>
+
+            <!-- Shift Creation Tab -->
             <div class="tab-content">
                 <div class="form-container">
-                    <h3>Create Student Account</h3>
-                    <form asp-action="CreateStudentAccount" method="post">
+                    <h3>Create Shift</h3>
+                    <form method="post" asp-action="CreateShift">
                         <div class="form-group">
-                            <input placeholder="Student ID" type="text" class="form-control" id="StudentId" name="studentId" required>
+                            <label for="ShiftDate">Date</label>
+                            <input type="date" class="form-control" id="ShiftDate" name="shiftDate" required>
                         </div>
                         <div class="form-group">
-                            <input placeholder="Name" type="text" class="form-control" id="Name" name="name" required>
+                            <label for="StartTime">Start Time</label>
+                            <input type="time" class="form-control" id="StartTime" name="startTime" required>
                         </div>
                         <div class="form-group">
-                            <input placeholder="Email" type="email" class="form-control" id="Email" name="email" required>
+                            <label for="EndTime">End Time</label>
+                            <input type="time" class="form-control" id="EndTime" name="endTime" required>
                         </div>
                         <div class="form-group">
-                            <input placeholder="Department" type="text" class="form-control" id="Department" name="department" required>
+                            <label for="Duration">Duration (hours)</label>
+                            <input type="number" class="form-control" id="Duration" name="duration" required>
                         </div>
-                        <div class="form-group">
-                            <label for="VisaRestricted">Visa Restricted</label>
-                            <select class="form-control" id="VisaRestricted" name="visaRestricted" required>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Create Account</button>
+                        <button type="submit" class="btn btn-primary">Publish Shift</button>
                     </form>
                 </div>
                 <br>
