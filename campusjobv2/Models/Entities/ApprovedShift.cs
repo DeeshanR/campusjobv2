@@ -25,5 +25,7 @@ namespace campusjobv2.Models.Entities
         
         [ForeignKey("Offer_ID")]
         public virtual OfferedShift OfferedShift { get; set; } = null!;
+            
+            
     }
 }

@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using campusjobv2.Models;
 using campusjobv2.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace campusjobv2.Controllers
 {
@@ -17,165 +20,185 @@ namespace campusjobv2.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var model = new RecruiterViewModel();
+            var recruiterId = HttpContext.Session.GetInt32("RecruiterId");
+            if (recruiterId == null) return RedirectToAction("Index", "Login");
 
-            // Get pending shifts (offered but not accepted)
-            var pendingShifts = await _context.OfferedShifts
-                .Include(o => o.Employee)
-                .ThenInclude(e => e.Recruiter)
-                .ThenInclude(r => r.User)
-                .Where(o => !o.Status)
-                .ToListAsync();
-
-            foreach (var shift in pendingShifts)
+            var model = new RecruiterViewModel
             {
-                model.PendingShifts.Add(new RecruiterViewModel.ShiftRecord
-                {
-                    ShiftId = shift.Offer_ID,
-                    Date = shift.Start_Date,
-                    StudentId = shift.Student_ID,
-                    StudentName = $"{shift.Employee.Recruiter.User.First_Name} {shift.Employee.Recruiter.User.Last_Name}",
-                    IsVisaRestricted = shift.Employee.VisaStatuses.Any(v => v.Status && v.ExpiryDate > DateTime.Now),
-                    StartTime = shift.Start_Date,
-                    EndTime = shift.End_Date,
-                    ApprovedHours = 0, // Will be updated when approved
-                    Duration = shift.Total_Hours
-                });
-            }
-
-            // Get active shifts (accepted but not completed)
-            var activeShifts = await _context.OfferedShifts
-                .Include(o => o.Employee)
-                .ThenInclude(e => e.Recruiter)
-                .ThenInclude(r => r.User)
-                .Where(o => o.Status && o.End_Date > DateTime.Now)
-                .ToListAsync();
-
-            foreach (var shift in activeShifts)
-            {
-                model.ActiveShifts.Add(new RecruiterViewModel.ShiftRecord
-                {
-                    ShiftId = shift.Offer_ID,
-                    Date = shift.Start_Date,
-                    StudentId = shift.Student_ID,
-                    StudentName = $"{shift.Employee.Recruiter.User.First_Name} {shift.Employee.Recruiter.User.Last_Name}",
-                    IsVisaRestricted = shift.Employee.VisaStatuses.Any(v => v.Status && v.ExpiryDate > DateTime.Now),
-                    StartTime = shift.Start_Date,
-                    EndTime = shift.End_Date,
-                    ApprovedHours = shift.ApprovedShifts.Sum(a => a.Hours_Worked),
-                    Duration = shift.Total_Hours
-                });
-            }
+                AvailableStudents = await GetStudents(recruiterId.Value),
+                PendingStudentApprovalShifts = await GetPendingStudentShifts(recruiterId.Value),
+                PendingAdminApprovalShifts = await GetPendingAdminShifts(recruiterId.Value),
+                ApprovedShifts = await GetApprovedShifts(recruiterId.Value)
+            };
 
             return View(model);
         }
 
 [HttpPost]
-public async Task<IActionResult> CreateShift(DateTime shiftDate, DateTime startTime, DateTime endTime, decimal duration)
+public async Task<IActionResult> CreateShift(DateTime shiftDate, DateTime startTime, DateTime endTime, decimal duration, int studentId)
 {
-    // 1. First find or create a default student employee
-    var defaultStudent = await _context.Employees
-        .Include(e => e.Recruiter)
-        .FirstOrDefaultAsync(e => e.Recruiter.User.Email == "default@student.com");
-    
-    if (defaultStudent == null)
+    var recruiterId = HttpContext.Session.GetInt32("RecruiterId");
+    if (recruiterId == null) return RedirectToAction("Index", "Login");
+
+    if (!await ValidateStudent(studentId, recruiterId.Value))
+        return RedirectWithError("Student not found or not assigned to you");
+
+    // Check visa restriction (only this part is needed)
+    var hasVisaRestriction = await _context.VisaStatuses
+        .AnyAsync(v => v.Student_ID == studentId && v.Status && v.ExpiryDate > DateTime.Now);
+
+    if (hasVisaRestriction && duration > 15)
     {
-        // Create default student user first
-        var studentUser = new User
-        {
-            First_Name = "Default",
-            Last_Name = "Student",
-            Email = "default@student.com",
-            Password = "TempPassword123", // Should be hashed in production
-            Role = 3 // Student role
-        };
-        _context.Users.Add(studentUser);
-        await _context.SaveChangesAsync();
-
-        // Get any recruiter (or use the same default recruiter logic from before)
-        var recruiter = await _context.Recruiters.FirstOrDefaultAsync();
-        if (recruiter == null)
-        {
-            ModelState.AddModelError("", "No recruiters available to assign students");
-            return View(); // Return to form with error
-        }
-
-        // Then create employee record
-        defaultStudent = new Employee
-        {
-            Student_ID = studentUser.User_ID, // Assuming Student_ID matches User_ID
-            Recruitment_ID = recruiter.Recruitment_ID
-        };
-        _context.Employees.Add(defaultStudent);
-        await _context.SaveChangesAsync();
+        return RedirectWithError("Cannot create shift that exceeds 15 hours for visa-restricted student");
     }
 
-    // 2. Create the shift with valid student ID
-    var shift = new OfferedShift
+    try 
     {
-        Student_ID = defaultStudent.Student_ID, // Use the valid student ID
-        Recruitment_ID = defaultStudent.Recruitment_ID, // Or get from current user if logged in
-        Date_Offered = DateTime.Now,
-        Status = false, // Pending
-        Start_Date = shiftDate.Date.Add(startTime.TimeOfDay),
-        End_Date = shiftDate.Date.Add(endTime.TimeOfDay),
-        Total_Hours = duration
-    };
+        var shift = new OfferedShift
+        {
+            Student_ID = studentId,
+            Recruitment_ID = recruiterId.Value,
+            Date_Offered = DateTime.Now,
+            Status = 0,
+            Start_Date = shiftDate.Date.Add(startTime.TimeOfDay),
+            End_Date = shiftDate.Date.Add(endTime.TimeOfDay),
+            Total_Hours = duration
+        };
 
-    _context.OfferedShifts.Add(shift);
-    await _context.SaveChangesAsync();
-
-    return RedirectToAction("Index");
-}
-
-[HttpPost]
-public async Task<IActionResult> AcceptShift(int shiftId)
-{
-    var shift = await _context.OfferedShifts
-        .Include(o => o.ApprovedShifts)
-        .FirstOrDefaultAsync(o => o.Offer_ID == shiftId);
-
-    if (shift == null)
-    {
-        return NotFound();
-    }
-
-    // Mark as approved
-    shift.Status = true;
-
-    // Create an approved shift record
-    var approvedShift = new ApprovedShift
-    {
-        Offer_ID = shift.Offer_ID,
-        Hours_Worked = shift.Total_Hours,
-        Status = true,
-        Date_Uploaded = DateTime.Now
-    };
-
-    _context.ApprovedShifts.Add(approvedShift);
-    
-    try
-    {
+        _context.OfferedShifts.Add(shift);
         await _context.SaveChangesAsync();
-        return RedirectToAction("Index");
+
+        // Notification code remains the same
+        var notification = new Notification
+        {
+            User_ID = studentId,
+            Message = $"New shift offered for {shiftDate.ToString("MM/dd/yyyy")} from {startTime.ToString("hh:mm tt")} to {endTime.ToString("hh:mm tt")}",
+            Time = DateTime.Now,
+            Read = false
+        };
+        _context.Notifications.Add(notification);
+        await _context.SaveChangesAsync();
+
+        return RedirectWithSuccess($"Shift created for student ID: {studentId}");
     }
     catch (Exception ex)
     {
-        // Log the error
-        Console.WriteLine($"Error approving shift: {ex.Message}");
-        return StatusCode(500, "Error approving shift");
+        return RedirectWithError($"Error creating shift: {ex.Message}");
     }
 }
 
         [HttpPost]
-        public async Task<IActionResult> DeclineShift(int shiftId)
+        public async Task<IActionResult> CancelShift(int id)
         {
-            var shift = await _context.OfferedShifts.FindAsync(shiftId);
-            if (shift != null)
-            {
-                _context.OfferedShifts.Remove(shift);
-                await _context.SaveChangesAsync();
-            }
+            var recruiterId = HttpContext.Session.GetInt32("RecruiterId");
+            if (recruiterId == null) return RedirectToAction("Index", "Login");
+
+            var shift = await _context.OfferedShifts
+                .Include(o => o.Employee.User)
+                .FirstOrDefaultAsync(o => o.Offer_ID == id && o.Recruitment_ID == recruiterId && o.Status == 0);
+
+            if (shift == null)
+                return RedirectWithError("Shift not found or cannot be cancelled");
+
+            _context.OfferedShifts.Remove(shift);
+            await _context.SaveChangesAsync();
+
+            return RedirectWithSuccess($"Shift cancelled for {shift.Employee.User.First_Name}");
+        }
+
+        private async Task<List<RecruiterViewModel.StudentInfo>> GetStudents(int recruiterId)
+        {
+            return await _context.Employees
+                .Where(e => e.Recruitment_ID == recruiterId)
+                .Include(e => e.User)
+                .Select(e => new RecruiterViewModel.StudentInfo
+                {
+                    StudentId = e.Student_ID,
+                    Name = $"{e.User.First_Name} {e.User.Last_Name}",
+                    Email = e.User.Email
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<RecruiterViewModel.StudentShiftRecord>> GetPendingStudentShifts(int recruiterId)
+        {
+            return await _context.OfferedShifts
+                .Where(o => o.Status == 0 && o.Recruitment_ID == recruiterId)
+                .Include(o => o.Employee.User)
+                .Include(o => o.Employee.VisaStatuses)
+                .Select(o => new RecruiterViewModel.StudentShiftRecord
+                {
+                    ShiftId = o.Offer_ID,
+                    Date = o.Start_Date,
+                    StudentId = o.Student_ID,
+                    StudentName = $"{o.Employee.User.First_Name} {o.Employee.User.Last_Name}",
+                    VisaStatus = o.Employee.VisaStatuses.Any(v => v.Status) ? "Required" : "Not Required",
+                    StartTime = o.Start_Date,
+                    EndTime = o.End_Date,
+                    Duration = o.Total_Hours
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<RecruiterViewModel.AdminApprovalShiftRecord>> GetPendingAdminShifts(int recruiterId)
+        {
+            return await _context.OfferedShifts
+                .Where(o => o.Status == 1 && o.Recruitment_ID == recruiterId)
+                .Include(o => o.Employee.User)
+                .Include(o => o.Employee.VisaStatuses)
+                .Select(o => new RecruiterViewModel.AdminApprovalShiftRecord
+                {
+                    ShiftId = o.Offer_ID,
+                    Date = o.Start_Date,
+                    StudentId = o.Student_ID,
+                    StudentName = $"{o.Employee.User.First_Name} {o.Employee.User.Last_Name}",
+                    VisaStatus = o.Employee.VisaStatuses.Any(v => v.Status) ? "Required" : "Not Required",
+                    StartTime = o.Start_Date,
+                    EndTime = o.End_Date,
+                    Duration = o.Total_Hours,
+                    DateOffered = o.Date_Offered
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<RecruiterViewModel.ApprovedShiftRecord>> GetApprovedShifts(int recruiterId)
+        {
+            return await _context.OfferedShifts
+                .Where(o => o.Status == 2 && o.Recruitment_ID == recruiterId)
+                .Include(o => o.Employee.User)
+                .Include(o => o.Employee.VisaStatuses)
+                .Select(o => new RecruiterViewModel.ApprovedShiftRecord
+                {
+                    ShiftId = o.Offer_ID,
+                    Date = o.Start_Date,
+                    StudentId = o.Student_ID,
+                    StudentName = $"{o.Employee.User.First_Name} {o.Employee.User.Last_Name}",
+                    VisaStatus = o.Employee.VisaStatuses.Any(v => v.Status) ? "Required" : "Not Required",
+                    StartTime = o.Start_Date,
+                    EndTime = o.End_Date,
+                    HoursWorked = o.Total_Hours,
+                    DateApproved = o.Date_Offered
+                })
+                .ToListAsync();
+        }
+
+        private async Task<bool> ValidateStudent(int studentId, int recruiterId)
+        {
+            return await _context.Employees
+                .AnyAsync(e => e.Student_ID == studentId && e.Recruitment_ID == recruiterId);
+        }
+
+        private IActionResult RedirectToLogin() => RedirectToAction("Index", "Login");
+        
+        private IActionResult RedirectWithError(string message)
+        {
+            TempData["Error"] = message;
+            return RedirectToAction("Index");
+        }
+        
+        private IActionResult RedirectWithSuccess(string message)
+        {
+            TempData["Success"] = message;
             return RedirectToAction("Index");
         }
     }
