@@ -64,7 +64,6 @@ public async Task<IActionResult> ApproveShift(int shiftId)
         await _context.SaveChangesAsync();
         _logger.LogInformation($"Shift {shiftId} approved successfully");
 
-        // Create notification for student
         var notification = new Notification
         {
             User_ID = offeredShift.Student_ID,
