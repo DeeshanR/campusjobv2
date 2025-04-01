@@ -43,7 +43,6 @@ public async Task<IActionResult> CreateShift(DateTime shiftDate, DateTime startT
     if (!await ValidateStudent(studentId, recruiterId.Value))
         return RedirectWithError("Student not found or not assigned to you");
 
-    // Check visa restriction (only this part is needed)
     var hasVisaRestriction = await _context.VisaStatuses
         .AnyAsync(v => v.Student_ID == studentId && v.Status && v.ExpiryDate > DateTime.Now);
 
@@ -68,7 +67,6 @@ public async Task<IActionResult> CreateShift(DateTime shiftDate, DateTime startT
         _context.OfferedShifts.Add(shift);
         await _context.SaveChangesAsync();
 
-        // Notification code remains the same
         var notification = new Notification
         {
             User_ID = studentId,
