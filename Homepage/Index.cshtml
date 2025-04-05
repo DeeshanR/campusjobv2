@@ -1,8 +1,10 @@
 ﻿@{
     ViewData["Title"] = "Homepage";
 }
+<!DOCTYPE html>
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         .container-home {
             display: flex;
@@ -71,6 +73,90 @@
         .right-content-home {
             margin-left: 30px;
         }
+
+        #bottom-section {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+
+        #login-background {
+            width: 100%;
+            height: 100%;
+            opacity: 0.5;
+        }
+
+
+        .btn-scroll {
+            display: block;
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .login-overlay {
+            position: absolute;
+            width: 800px;
+            height: 500px;
+            background-color: #C00444;
+            z-index: 2;
+            top: 51%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .login-overlay1 {
+            width: 500px;
+            height: 100%;
+            background-color: white;
+            border-top-left-radius: 20px;
+            border-bottom-left-radius: 20px;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .campus {
+            font-size: 35px;
+            margin-top: 70px;
+            margin-bottom: 60px;
+        }
+
+        input[type="email"], input[type="password"] {
+            width: 70%;
+            height: 30px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        button.sign-in {
+            width: 50%;
+            height: 45px;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #C00444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+            button.sign-in:hover {
+                background-color: #a0033b;
+            }
     </style>
 </head>
 
@@ -84,7 +170,7 @@
         <div class="image-container-home">
             <img src="Icons/StudentBoard.avif" alt="Student Board" class="active-home">
             <img src="Icons/AdminBoard.png" alt="Admin Board">
-            <img src="Icons/RecruiterBoard.png" alt="Recruiter Board">
+            <img src="Icons/RecruiterBoard.jpg" alt="Recruiter Board">
         </div>
 
         <div class="right-content-home">
@@ -98,11 +184,55 @@
         </div>
     </div>
 
-    <a href="/login" class="btn btn-primary" style="width: 150px;">
-        Login
+    <a href="#bottom-section" class="btn btn-primary btn-scroll" id="continueButton" style="width: 150px; margin-bottom: 100px; text-decoration: none;">
+        Continue
     </a>
 
+
+
+    <div id="bottom-section">
+        <img src="Icons/loginpage.jpg" alt="login background" id="login-background" />
+        <div class="login-overlay">
+            <div class="login-overlay1">
+                <p class="campus">Campus Login</p>
+                <input type="email" placeholder="Email">
+                <input type="password" placeholder="Password">
+                <button class="sign-in">Sign In</button>
+            </div>
+            <img src="Icons/hallam.png" alt="hallam logo" style="width: 150px; margin-left: 10%;" />
+        </div>
+    </div>
+
+
     <script>
+        document.getElementById("continueButton").addEventListener("click", function() {
+            const target = document.querySelector("#bottom-section");
+            const targetPosition = document.body.scrollHeight;
+            const startPosition = window.scrollY;
+            const distance = targetPosition - startPosition;
+            const duration = 1000;
+            let startTime = null;
+
+            function scrollToPosition(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const run = easeInOutQuad(timeElapsed, startPosition, distance, duration);
+                window.scrollTo(0, run);
+                if (timeElapsed < duration) {
+                    requestAnimationFrame(scrollToPosition);
+                }
+            }
+
+            function easeInOutQuad(t, b, c, d) {
+                t /= d / 2;
+                if (t < 1) return (c / 2) * t * t + b;
+                t--;
+                return (-c / 2) * (t * (t - 2) - 1) + b;
+            }
+
+            requestAnimationFrame(scrollToPosition);
+        });
+
         const images = document.querySelectorAll('.image-container-home img');
         const textElement = document.querySelector('.text-home');
         const textOptions = ["Student Board", "Admin Board", "Recruiter Board"];
@@ -124,7 +254,8 @@
             }, 400);
         }
 
-        setInterval(updateContent, 4000);
+        setInterval(updateContent, 3500);
     </script>
+
 
 </body>
