@@ -576,26 +576,7 @@ namespace Tests_For_Campus_Jobs_Project
             Assert.That(indexResult != null);
         }
 
-        [Test]
-        public async Task IT_AC_Index_RedirectToAction()
-        {
-            DbContextOptionsBuilder<ApplicationDbContext> optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-            optionsBuilder.UseMySql("Server=localhost;Database=CampusJobV2;User=root;Password=P@ssword123;", new MySqlServerVersion(new Version(8, 0, 34)));
-            DbContextOptions<ApplicationDbContext> contextOptions = optionsBuilder.Options;
-            ApplicationDbContext context = new ApplicationDbContext(contextOptions);
-
-            var mockLogger = new Mock<ILogger<AdminController>>();
-            ILogger<AdminController> adminLogger = mockLogger.Object;
-
-            AdminController adminController = new AdminController(context, adminLogger);
-
-            Mock<ITempDataProvider> mockProvider = new Mock<ITempDataProvider> { CallBase = true };
-            var provider = mockProvider.Object;
-
-            adminController.TempData = new TempDataDictionary(new DefaultHttpContext(), provider);
-
-            //indexResult = await adminController.Index("Student) as Re;
-        }
+        
     }
 
     internal class TimesheetControllerTests : BaseFunctions
