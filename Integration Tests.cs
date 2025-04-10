@@ -706,13 +706,7 @@ namespace Tests_For_Campus_Jobs_Project
             
         }
 
-        //decline shift
-
-        [Test]
-        public async Task DeclineShift()
-        {
-
-        }
+        
 
         [Test]
         public async Task MarkAsRead()
