@@ -6,6 +6,11 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        .home-wrapper {
+            padding-top: 8vh;
+            padding-bottom: 8.5vh;
+        }
+
         .container-home {
             display: flex;
             justify-content: center;
@@ -162,32 +167,34 @@
 
 <body>
 
-    <div class="container-home">
-        <div class="left-content-home">
-            <img src="Icons/Welcome.png" alt="Welcome" style="width: 200px; height: auto;">
-        </div>
+    <div class="home-wrapper">
+        <div class="container-home">
+            <div class="left-content-home">
+                <img src="Icons/Welcome.png" alt="Welcome" style="width: 200px; height: auto;">
+            </div>
 
-        <div class="image-container-home">
-            <img src="Icons/StudentBoard.avif" alt="Student Board" class="active-home">
-            <img src="Icons/AdminBoard.png" alt="Admin Board">
-            <img src="Icons/RecruiterBoard.jpg" alt="Recruiter Board">
-        </div>
+            <div class="image-container-home">
+                <img src="Icons/StudentBoard.avif" alt="Student Board" class="active-home">
+                <img src="Icons/AdminBoard.png" alt="Admin Board">
+                <img src="Icons/RecruiterBoard.jpg" alt="Recruiter Board">
+            </div>
 
-        <div class="right-content-home">
-            <div class="text-container-home">
-                <span>to the</span>
-                <b class="text-home">
-                    <span class="red-text-home">Student</span>
-                    <span class="black-text-home">Board</span>
-                </b>
+            <div class="right-content-home">
+                <div class="text-container-home">
+                    <span>to the</span>
+                    <b class="text-home">
+                        <span class="red-text-home">Student</span>
+                        <span class="black-text-home">Board</span>
+                    </b>
+                </div>
             </div>
         </div>
+
+        <a href="#bottom-section" class="btn btn-primary btn-scroll" id="continueButton" style="width: 150px; margin-bottom: 100px; text-decoration: none;">
+            Continue
+        </a>
+
     </div>
-
-    <a href="#bottom-section" class="btn btn-primary btn-scroll" id="continueButton" style="width: 150px; margin-bottom: 100px; text-decoration: none;">
-        Continue
-    </a>
-
 
 
     <div id="bottom-section">
